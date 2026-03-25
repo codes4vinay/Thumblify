@@ -1,14 +1,9 @@
 import { Request, Response } from "express";
 import Thumbnail from "../models/Thumbnail.js";
-import {
-  GenerateContentConfig,
-  HarmBlockThreshold,
-  HarmCategory,
-} from "@google/genai";
-import ai from "../configs/ai.js";
 import path from "node:path";
 import fs from "fs";
 import { v2 as cloudinary } from "cloudinary";
+import axios from "axios";
 
 const stylePrompts = {
   "Bold & Graphic":
@@ -65,37 +60,7 @@ export const generateThumbnail = async (req: Request, res: Response) => {
       isGenerating: true,
     });
 
-    const model = "gemini-3-pro-image-preview";
-
-    const generationConfig: GenerateContentConfig = {
-      maxOutputTokens: 32768,
-      temperature: 1,
-      topP: 0.95,
-      responseModalities: ["IMAGE"],
-      imageConfig: {
-        aspectRatio: aspect_ratio || "16:9",
-        imageSize: "1K",
-      },
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-      ],
-    };
-
+    // Build the prompt
     let prompt = `Create a ${stylePrompts[style as keyof typeof stylePrompts]} for: "${title}"`;
     if (color_scheme) {
       prompt += ` Use a ${colorSchemeDescriptions[color_scheme as keyof typeof colorSchemeDescriptions]} color scheme.`;
@@ -103,40 +68,29 @@ export const generateThumbnail = async (req: Request, res: Response) => {
     if (user_prompt) {
       prompt += ` Additional details: ${user_prompt}`;
     }
+    prompt += ` Ensure the thumbnail is visually stunning, and designed to maximize click-through rates. Make it bold, professional, and impossible to ignore`;
 
-    prompt += `Ensure the thumbnail should be ${aspect_ratio} , visually stunning, and designed to maximize click-through rates. Make it bold, professional, and impossible to ignore`;
+    // Generate image using Pollinations.ai (FREE - no API key needed!)
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
 
-    //Generate the thumbnail using Gemini API
-    const response: any = await ai.models.generateContent({
-      model,
-      contents: [prompt],
-      config: generationConfig,
+    // Download the image
+    const response = await axios.get(imageUrl, {
+      responseType: "arraybuffer",
+      timeout: 30000,
     });
 
-    //Check if rersponse is valid
-    if (!response?.candidates?.[0].content?.parts) {
-      throw new Error("Unexpected response");
-    }
-
-    const parts = response.candidates[0].content.parts;
-
-    let finalBuffer: Buffer | null = null;
-
-    for (const part of parts) {
-      if (part.inlineData) {
-        finalBuffer = Buffer.from(part.inlineData.data, "base64");
-      }
-    }
+    const finalBuffer = Buffer.from(response.data, "binary");
 
     const filename = `final-output-${Date.now()}.png`;
     const filepath = path.join("images", filename);
 
-    //Create the images directory if it doesn't exist
+    // Create the images directory if it doesn't exist
     fs.mkdirSync("images", { recursive: true });
 
-    //Write the final image to the file
-    fs.writeFileSync(filepath, finalBuffer!);
+    // Write the final image to the file
+    fs.writeFileSync(filepath, finalBuffer);
 
+    // Upload to Cloudinary
     const uploadResult = await cloudinary.uploader.upload(filepath, {
       resource_type: "image",
     });
@@ -151,7 +105,7 @@ export const generateThumbnail = async (req: Request, res: Response) => {
       thumbnail,
     });
 
-    //remove the local file after upload
+    // Remove the local file after upload
     fs.unlinkSync(filepath);
   } catch (error: any) {
     console.error("Error generating thumbnail:", error);
@@ -161,19 +115,18 @@ export const generateThumbnail = async (req: Request, res: Response) => {
   }
 };
 
-//Controller to delete a thumbnail
+// Controller to delete a thumbnail
 export const deleteThumbnail = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { userId } = req.session;
 
-   await Thumbnail.findOneAndDelete({
+    await Thumbnail.findOneAndDelete({
       _id: id,
       userId,
     });
 
     res.json({ success: true, message: "Thumbnail deleted successfully" });
-
   } catch (error: any) {
     console.error("Error deleting thumbnail:", error);
     res.status(500).json({ success: false, error: "Failed to delete thumbnail" });
