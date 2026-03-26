@@ -11,7 +11,7 @@ export default function FeaturesSection() {
             <SectionTitle text1="Features" text2="Why use our generator?" text3="Create stunning thumbnails that gets clicks, without any hassle." />
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-4 mt-16 px-6">
                 {featuresData.map((feature: IFeature, index: number) => (
-                    <motion.div key={index} className={`${index === 1 ? 'p-px rounded-[13px] bg-linear-to-br from-pink-600 to-slate-800' : ''}`}
+                    <motion.div key={index} className={`${index === 1 ? 'p-px rounded-[13px] bg-linear-to-br from-cyan-500 to-slate-800' : ''}`}
                         initial={{ y: 150, opacity: 0 }}
                         whileInView={{ y: 0, opacity: 1 }}
                         viewport={{ once: true }}
@@ -30,7 +30,7 @@ export default function FeaturesSection() {
                 ))}
             </div>
             <div className="mt-40 relative mx-auto max-w-5xl">
-                <div className="absolute -z-50 size-100 -top-10 -left-20 aspect-square rounded-full bg-pink-500/40 blur-3xl"></div>
+                <div className="absolute -z-50 size-100 -top-10 -left-20 aspect-square rounded-full bg-cyan-500/30 blur-3xl"></div>
                 <motion.p className="text-slate-300 text-lg text-left max-w-3xl"
                     initial={{ y: 150, opacity: 0 }}
                     whileInView={{ y: 0, opacity: 1 }}
@@ -57,7 +57,7 @@ export default function FeaturesSection() {
                         <img src="/assets/features-showcase-2.png" alt="features showcase" width={1000} height={500} className="hover:-translate-y-0.5 transition duration-300" />
                         <h3 className="text-[24px]/7.5 text-slate-300 font-medium mt-6">Boost your views with AI-optimized designs.</h3>
                         <p className="text-slate-300 mt-2">Stop guessing and start ranking. Our AI creates designs proven to capture attention.</p>
-                        <a href="https://prebuiltui.com" className="group flex items-center gap-2 mt-4 text-pink-600 hover:text-pink-700 transition">
+                        <a href="https://prebuiltui.com" className="group flex items-center gap-2 mt-4 text-cyan-500 hover:text-cyan-400 transition">
                             Start Generating free
                             <ArrowUpRight className="size-5 group-hover:translate-x-0.5 transition duration-300" />
                         </a>

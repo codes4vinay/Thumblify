@@ -139,7 +139,7 @@ const MyGeneration = () => {
                   </div>
 
                   <div onClick={(e)=>e.stopPropagation()} className="absolute bottom-2 right-2 flex gap-1.5 max-sm:flex sm:hidden group-hover:flex">
-                    <TrashIcon onClick={()=> handleDelete(thumb._id)} className="size-8 bg-black/50 p-1 rounded hover:bg-pink-600 transition-all" />
+                    <TrashIcon onClick={()=> handleDelete(thumb._id)} className="size-8 bg-black/50 p-1 rounded hover:bg-cyan-600 transition-all" />
                     <DownloadIcon onClick={() => handleDownload(thumb.image_url!)} className="size-8 bg-black/50 p-1 rounded hover:bg-green-600 transition-all" />
                     <Link to={`/preview?thumbnail_url=${thumb.image_url}&title=${thumb.title}`} target="_blank" rel="noopener noreferrer"> 
                       <ArrowUpRightIcon className="size-8 bg-black/50 p-1 rounded hover:bg-blue-600 transition-all" />

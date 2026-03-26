@@ -105,7 +105,7 @@ const Generate = () => {
                   {/* TITLE INPUT */}
                   <div className="space-y-2">
                     <label htmlFor="title" className="block text-sm font-medium">Title or Topic</label>
-                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} placeholder="e.g., 10 Tips for Better Sleep" className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500"></input>
+                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} placeholder="e.g., 10 Tips for Better Sleep" className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"></input>
                     <div className="flex justify-end">
                       <span className="text-xs text-zinc-400">{title.length}/100</span>
                     </div>
@@ -124,13 +124,13 @@ const Generate = () => {
                 {/* Details */}
                 <div className="space-y-2">
                   <label htmlFor="details" className="block text-sm font-medium">Additional Prompts <span className="text-zinc-400 text-xs">(optional*)</span></label>
-                  <textarea id="details" value={additionalDetails} onChange={(e) => setAdditionalDetails(e.target.value)} rows={3} placeholder="Describe the specific details you want in your thumbnail..." className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none"></textarea>
+                  <textarea id="details" value={additionalDetails} onChange={(e) => setAdditionalDetails(e.target.value)} rows={3} placeholder="Describe the specific details you want in your thumbnail..." className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"></textarea>
                 </div>
 
 
                 {/* BUTTON */}
                 {!id && (
-                  <button onClick={handleGenerate} className="text-[15px] w-full py-3.5 rounded-xl font-medium bg-linear-to-b from-pink-500 to-pink-600 hover:from-pink-700 disabled:cursor-not-allowed transition-colors">
+                  <button onClick={handleGenerate} className="text-[15px] w-full py-3.5 rounded-xl font-medium bg-linear-to-b from-cyan-500 to-teal-600 hover:from-cyan-600 disabled:cursor-not-allowed transition-colors">
                     {loading ? 'Generating...' : 'Generate Thumbnail'}
                   </button>
                 )}

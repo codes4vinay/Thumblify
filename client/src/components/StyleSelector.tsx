@@ -23,7 +23,7 @@ const StyleSelector = ({ value, onChange, isOpen, setIsOpen }: { value: Thumbnai
       <div className="relative space-y-3 dark">
           <label className="block text-sm font-medium text-zinc-200">Thumbnail Style</label>
 
-          <button type="button" onClick={() => setIsOpen(!isOpen)} className="w-full px-4 py-3.5 rounded-lg bg-zinc-800 border border-zinc-700 text-left text-white focus:outline-none focus:ring-2 focus:ring-pink-500 flex justify-between items-center">
+          <button type="button" onClick={() => setIsOpen(!isOpen)} className="w-full px-4 py-3.5 rounded-lg bg-zinc-800 border border-zinc-700 text-left text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 flex justify-between items-center">
               <div className="space-y-1">
                   <div className="flex items-center gap-2 font-medium">
                       {styleIcons[value]}
@@ -46,7 +46,7 @@ const StyleSelector = ({ value, onChange, isOpen, setIsOpen }: { value: Thumbnai
                                   onChange(style);
                                   setIsOpen(false);
                               }}
-                              className="w-full px-4 py-3.5 text-left text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-pink-500 flex items-center gap-2"
+                              className="w-full px-4 py-3.5 text-left text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 flex items-center gap-2"
                           >
                               <div className="mt-0.5">{styleIcons[style]}</div>
                               <div>

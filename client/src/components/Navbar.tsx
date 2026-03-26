@@ -23,10 +23,10 @@ export default function Navbar() {
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8 transition duration-500">
-                    <Link to="/" className="hover:text-pink-300 transition">Home</Link>
-                    <Link to="/generate" className="hover:text-pink-300 transition">Generate</Link>
-                    {isLoggedIn ? <Link to="/my-generation" className="hover:text-pink-300 transition">My Generations</Link> : <Link to="#" className="hover:text-pink-300 transition">About</Link>}
-                    <Link to="#" className="hover:text-pink-300 transition">Conatct Us</Link>
+                    <Link to="/" className="hover:text-cyan-300 transition">Home</Link>
+                    <Link to="/generate" className="hover:text-cyan-300 transition">Generate</Link>
+                    {isLoggedIn ? <Link to="/my-generation" className="hover:text-cyan-300 transition">My Generations</Link> : <Link to="#" className="hover:text-cyan-300 transition">About</Link>}
+                    <Link to="#" className="hover:text-cyan-300 transition">Conatct Us</Link>
                 </div>
                 <div className="flex items-center gap-2">
                     {isLoggedIn ? (
@@ -40,7 +40,7 @@ export default function Navbar() {
                             </div>
                         </div>
                     ) : (
-                        <button onClick={() => navigate('/login')} className="hidden md:block px-6 py-2.5 bg-pink-600 hover:bg-pink-700 active:scale-95 transition-all rounded-full">
+                        <button onClick={() => navigate('/login')} className="hidden md:block px-6 py-2.5 bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-all rounded-full">
                             Get Started
                         </button>
                     )}
@@ -57,11 +57,11 @@ export default function Navbar() {
                 {isLoggedIn ? <Link onClick={() => setIsOpen(false)} to="/my-generation">My Generations</Link> : <Link onClick={() => setIsOpen(false)} to="#">About</Link>}
                 <Link onClick={() => setIsOpen(false)} to="#">Conatct Us</Link>
                 {isLoggedIn ? (
-                    <button onClick={() => { logout(); setIsOpen(false); }} className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 active:scale-95 transition-all rounded-full">
+                    <button onClick={() => { logout(); setIsOpen(false); }} className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-all rounded-full">
                         Logout
                     </button>
                 ) : <Link onClick={() => setIsOpen(false)} to='/login'>Login</Link>}
-                <button onClick={() => setIsOpen(false)} className="active:ring-3 active:ring-white aspect-square size-10 p-1 items-center justify-center bg-pink-600 hover:bg-pink-700 transition text-white rounded-md flex">
+                <button onClick={() => setIsOpen(false)} className="active:ring-3 active:ring-white aspect-square size-10 p-1 items-center justify-center bg-cyan-600 hover:bg-cyan-700 transition text-white rounded-md flex">
                     <XIcon />
                 </button>
             </div>

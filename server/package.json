@@ -10,7 +10,6 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@google/genai": "^1.38.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.9.0",
     "connect-mongo": "^6.0.0",

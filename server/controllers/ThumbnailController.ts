@@ -1,13 +1,9 @@
 import { Request, Response } from "express";
 import Thumbnail from "../models/Thumbnail.js";
-import {
-  GenerateContentConfig,
-  HarmBlockThreshold,
-  HarmCategory,
-} from "@google/genai";
-import ai from "../configs/ai.js";
-import path from "node:path";
+import type { IThumbnail } from "../models/Thumbnail.js";
+import type { HydratedDocument } from "mongoose";
 import fs from "fs";
+import path from "node:path";
 import { v2 as cloudinary } from "cloudinary";
 
 const stylePrompts = {
@@ -41,7 +37,192 @@ const colorSchemeDescriptions = {
     "soft pastel colors, low saturation, gentle tones, calm and friendly aesthetic",
 };
 
+const aspectRatioDimensions = {
+  "16:9": { width: 1280, height: 720 },
+  "1:1": { width: 1024, height: 1024 },
+  "9:16": { width: 720, height: 1280 },
+} as const;
+
+const buildPrompt = ({
+  title,
+  style,
+  aspectRatio,
+  colorScheme,
+  userPrompt,
+  textOverlay,
+}: {
+  title: string;
+  style: string;
+  aspectRatio: keyof typeof aspectRatioDimensions;
+  colorScheme?: string;
+  userPrompt?: string;
+  textOverlay?: boolean;
+}) => {
+  let prompt = `Create a ${stylePrompts[style as keyof typeof stylePrompts]} thumbnail for: "${title}".`;
+
+  if (colorScheme) {
+    prompt += ` Use a ${
+      colorSchemeDescriptions[colorScheme as keyof typeof colorSchemeDescriptions]
+    } color scheme.`;
+  }
+
+  if (userPrompt) {
+    prompt += ` Additional details: ${userPrompt}.`;
+  }
+
+  prompt += ` The thumbnail must match a ${aspectRatio} layout, feel premium, bold, high-contrast, and optimized for click-through rate.`;
+
+  if (textOverlay) {
+    prompt +=
+      " Include large, clean headline-style text placement that feels readable and YouTube-ready.";
+  }
+
+  prompt +=
+    " Avoid watermarks, extra fingers, distorted faces, blurry details, low contrast, and illegible text.";
+
+  return prompt;
+};
+
+const sanitizePrompt = (prompt: string) =>
+  prompt
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 900);
+
+const getPollinationsApiKey = () => process.env.POLLINATIONS_API_KEY?.trim();
+
+const createPollinationsUrl = ({
+  prompt,
+  width,
+  height,
+  seed,
+  model,
+  enhance,
+  nologo,
+}: {
+  prompt: string;
+  width: number;
+  height: number;
+  seed: number;
+  model?: string;
+  enhance?: boolean;
+  nologo?: boolean;
+}) => {
+  const url = new URL(
+    `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`,
+  );
+
+  url.searchParams.set("width", String(width));
+  url.searchParams.set("height", String(height));
+  url.searchParams.set("seed", String(seed));
+
+  if (model) {
+    url.searchParams.set("model", model);
+  }
+
+  if (enhance) {
+    url.searchParams.set("enhance", "true");
+  }
+
+  if (nologo) {
+    url.searchParams.set("nologo", "true");
+  }
+
+  const apiKey = getPollinationsApiKey();
+
+  if (apiKey) {
+    url.searchParams.set("key", apiKey);
+  }
+
+  return url.toString();
+};
+
+const fetchPollinationsImage = async (imageUrl: string) => {
+  const apiKey = getPollinationsApiKey();
+  const response = await fetch(imageUrl, {
+    headers: {
+      Accept: "image/*",
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = (await response.text()).slice(0, 300);
+    throw new Error(
+      `Free image provider failed with status ${response.status}${
+        errorText ? `: ${errorText}` : ""
+      }`,
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+};
+
+const createPollinationsSeed = () =>
+  Math.floor(Math.random() * 2_147_483_647);
+
+const generateWithPollinations = async ({
+  prompt,
+  aspectRatio,
+}: {
+  prompt: string;
+  aspectRatio: keyof typeof aspectRatioDimensions;
+}) => {
+  if (!getPollinationsApiKey()) {
+    throw new Error(
+      "Pollinations API key is missing. Set POLLINATIONS_API_KEY in server/.env.",
+    );
+  }
+
+  const { width, height } = aspectRatioDimensions[aspectRatio];
+  const seed = createPollinationsSeed();
+  const sanitizedPrompt = sanitizePrompt(prompt);
+  const requestUrls = [
+    createPollinationsUrl({
+      prompt: sanitizedPrompt,
+      width,
+      height,
+      seed,
+    }),
+    createPollinationsUrl({
+      prompt: sanitizedPrompt,
+      width,
+      height,
+      seed,
+      model: "flux",
+    }),
+    createPollinationsUrl({
+      prompt: sanitizedPrompt,
+      width,
+      height,
+      seed,
+      model: "flux",
+      enhance: true,
+    }),
+  ];
+
+  let lastError: Error | null = null;
+
+  for (const imageUrl of requestUrls) {
+    try {
+      return await fetchPollinationsImage(imageUrl);
+    } catch (error) {
+      lastError = error as Error;
+      console.warn("Pollinations request failed:", imageUrl, lastError.message);
+    }
+  }
+
+  throw (
+    lastError ??
+    new Error("Free image provider failed before returning an image")
+  );
+};
+
 export const generateThumbnail = async (req: Request, res: Response) => {
+  let thumbnail: HydratedDocument<IThumbnail> | null = null;
+  let filepath: string | null = null;
+
   try {
     const { userId } = req.session;
     const {
@@ -53,7 +234,7 @@ export const generateThumbnail = async (req: Request, res: Response) => {
       text_overlay,
     } = req.body;
 
-    const thumbnail = await Thumbnail.create({
+    thumbnail = await Thumbnail.create({
       userId,
       title,
       prompt_used: user_prompt,
@@ -65,77 +246,30 @@ export const generateThumbnail = async (req: Request, res: Response) => {
       isGenerating: true,
     });
 
-    const model = "gemini-3-pro-image-preview";
+    const safeAspectRatio =
+      aspect_ratio && aspect_ratio in aspectRatioDimensions
+        ? (aspect_ratio as keyof typeof aspectRatioDimensions)
+        : "16:9";
 
-    const generationConfig: GenerateContentConfig = {
-      maxOutputTokens: 32768,
-      temperature: 1,
-      topP: 0.95,
-      responseModalities: ["IMAGE"],
-      imageConfig: {
-        aspectRatio: aspect_ratio || "16:9",
-        imageSize: "1K",
-      },
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-      ],
-    };
-
-    let prompt = `Create a ${stylePrompts[style as keyof typeof stylePrompts]} for: "${title}"`;
-    if (color_scheme) {
-      prompt += ` Use a ${colorSchemeDescriptions[color_scheme as keyof typeof colorSchemeDescriptions]} color scheme.`;
-    }
-    if (user_prompt) {
-      prompt += ` Additional details: ${user_prompt}`;
-    }
-
-    prompt += `Ensure the thumbnail should be ${aspect_ratio} , visually stunning, and designed to maximize click-through rates. Make it bold, professional, and impossible to ignore`;
-
-    //Generate the thumbnail using Gemini API
-    const response: any = await ai.models.generateContent({
-      model,
-      contents: [prompt],
-      config: generationConfig,
+    const prompt = buildPrompt({
+      title,
+      style,
+      aspectRatio: safeAspectRatio,
+      colorScheme: color_scheme,
+      userPrompt: user_prompt,
+      textOverlay: text_overlay,
     });
 
-    //Check if rersponse is valid
-    if (!response?.candidates?.[0].content?.parts) {
-      throw new Error("Unexpected response");
-    }
-
-    const parts = response.candidates[0].content.parts;
-
-    let finalBuffer: Buffer | null = null;
-
-    for (const part of parts) {
-      if (part.inlineData) {
-        finalBuffer = Buffer.from(part.inlineData.data, "base64");
-      }
-    }
+    const finalBuffer = await generateWithPollinations({
+      prompt,
+      aspectRatio: safeAspectRatio,
+    });
 
     const filename = `final-output-${Date.now()}.png`;
-    const filepath = path.join("images", filename);
+    filepath = path.join("images", filename);
 
-    //Create the images directory if it doesn't exist
     fs.mkdirSync("images", { recursive: true });
-
-    //Write the final image to the file
-    fs.writeFileSync(filepath, finalBuffer!);
+    fs.writeFileSync(filepath, finalBuffer);
 
     const uploadResult = await cloudinary.uploader.upload(filepath, {
       resource_type: "image",
@@ -150,14 +284,26 @@ export const generateThumbnail = async (req: Request, res: Response) => {
       message: "Thumbnail generated successfully",
       thumbnail,
     });
-
-    //remove the local file after upload
-    fs.unlinkSync(filepath);
   } catch (error: any) {
     console.error("Error generating thumbnail:", error);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to generate thumbnail" });
+
+    if (thumbnail) {
+      try {
+        thumbnail.isGenerating = false;
+        await thumbnail.save();
+      } catch (saveError) {
+        console.error("Error updating failed thumbnail status:", saveError);
+      }
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Failed to generate thumbnail";
+
+    res.status(500).json({ success: false, error: message });
+  } finally {
+    if (filepath && fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+    }
   }
 };
 
