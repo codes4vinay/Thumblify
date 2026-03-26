@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "node:path";
 import { v2 as cloudinary } from "cloudinary";
 
+
 const stylePrompts = {
   "Bold & Graphic":
     "eye-catching thumbnail, bold typography, vibrant colors, expressive facial reaction, dramatic lighting, high contrast, click-worthy composition, professional style",
@@ -271,6 +272,7 @@ export const generateThumbnail = async (req: Request, res: Response) => {
     fs.mkdirSync("images", { recursive: true });
     fs.writeFileSync(filepath, finalBuffer);
 
+    // Upload to Cloudinary
     const uploadResult = await cloudinary.uploader.upload(filepath, {
       resource_type: "image",
     });
@@ -307,19 +309,18 @@ export const generateThumbnail = async (req: Request, res: Response) => {
   }
 };
 
-//Controller to delete a thumbnail
+// Controller to delete a thumbnail
 export const deleteThumbnail = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { userId } = req.session;
 
-   await Thumbnail.findOneAndDelete({
+    await Thumbnail.findOneAndDelete({
       _id: id,
       userId,
     });
 
     res.json({ success: true, message: "Thumbnail deleted successfully" });
-
   } catch (error: any) {
     console.error("Error deleting thumbnail:", error);
     res.status(500).json({ success: false, error: "Failed to delete thumbnail" });
